@@ -21,7 +21,10 @@ library(rvest)
 library(XML)
 library(imputeTS)
 library(zoo)
+library(ggpubr)
 
+
+install.packages("ggpubr", dependencies = TRUE, INSTALL_opts = '--no-lock')
 
 options(scipen = 999)
 
@@ -420,7 +423,7 @@ Tabela_Chainlink$Mesec <- format(as.POSIXct(Tabela_Chainlink$Date, format = '%Y-
 Tabela_Tezos$Mesec <- format(as.POSIXct(Tabela_Tezos$Date, format = '%Y-%m-%d'), format = "%Y-%m")
 
 
-#Procentualna promena po danu
+#Procentualna promena po danu (cena i volume)
 
 
 Tabela_Bitcoin <- Tabela_Bitcoin %>%
@@ -434,6 +437,55 @@ Tabela_Chainlink <- Tabela_Chainlink %>%
 
 Tabela_Tezos <- Tabela_Tezos %>%
   mutate(Proc_promena = (Close/lead(Close) - 1) * 100)
+
+
+
+#Volume
+
+Tabela_Bitcoin <- Tabela_Bitcoin %>%
+  mutate(Proc_promena_volume = (Volume/lead(Volume) - 1) * 100)
+
+Tabela_Algorand <- Tabela_Algorand %>%
+  mutate(Proc_promena_volume = (Volume/lead(Volume) - 1) * 100)
+
+Tabela_Chainlink <- Tabela_Chainlink %>%
+  mutate(Proc_promena_volume = (Volume/lead(Volume) - 1) * 100)
+
+Tabela_Tezos<- Tabela_Tezos %>%
+  mutate(Proc_promena_volume = (Volume/lead(Volume) - 1) * 100)
+
+
+#Filtriranje po pozitivnosti procentualne promene vrednosti po danu
+
+Pozitivna_proc_promena_po_danu_Bitcoin <- Tabela_Bitcoin %>%
+  filter(Proc_promena > 0)
+
+Negativna_proc_promena_po_danu_Bitcoin <- Tabela_Bitcoin %>%
+  filter(Proc_promena < 0)
+
+
+
+Pozitivna_proc_promena_po_danu_Algo <- Tabela_Algorand %>%
+  filter(Proc_promena > 0)
+
+Negativna_proc_promena_po_danu_Algo <- Tabela_Algorand %>%
+  filter(Proc_promena < 0)
+
+
+
+Pozitivna_proc_promena_po_danu_Link <- Tabela_Chainlink %>%
+  filter(Proc_promena > 0)
+
+Negativna_proc_promena_po_danu_Link <- Tabela_Chainlink %>%
+  filter(Proc_promena < 0)
+
+
+
+Pozitivna_proc_promena_po_danu_Xtz <- Tabela_Tezos %>%
+  filter(Proc_promena > 0)
+
+Negativna_proc_promena_po_danu_Xtz <- Tabela_Tezos %>%
+  filter(Proc_promena < 0)
 
 
 #Procentualna razlika izmedju pocetne i krajnje cene po danu
@@ -843,6 +895,60 @@ ggplot(Tabela_Bitcoin, aes(x = Date, y = Proc_razlika_max_i_min)) +
   theme_bw(base_size = 30)
 
 
+
+#Procentualna promena po danu vrednosti i volume-a + medijana i ar. sredina
+
+
+Median_Bitcoin <- median(Pozitivna_proc_promena_po_danu_Bitcoin$Proc_promena)
+
+Mean_Bitcoin <- mean(Pozitivna_proc_promena_po_danu_Bitcoin$Proc_promena)
+
+
+Neg_median_Bitcoin <- median(Negativna_proc_promena_po_danu_Bitcoin$Proc_promena)
+
+Neg_mean_Bitcoin <- mean(Negativna_proc_promena_po_danu_Bitcoin$Proc_promena)
+
+
+Sd_Bitcoin <- sd(Pozitivna_proc_promena_po_danu_Bitcoin$Proc_promena)
+
+Neg_sd_Bitcoin <- sd(Negativna_proc_promena_po_danu_Bitcoin$Proc_promena)
+
+
+Medijana_sredina_Bitcoin <- cbind(Median_Bitcoin, Mean_Bitcoin, Neg_median_Bitcoin, Neg_mean_Bitcoin)
+
+Medijana_sredina_Bitcoin <- as.data.frame(Medijana_sredina_Bitcoin)
+
+Medijana_sredina_Bitcoin <- cbind(Medijana_sredina_Bitcoin, Sd_Bitcoin, Neg_sd_Bitcoin)
+
+
+Tabela_plot_Bitcoin <- ggtexttable(Medijana_sredina_Bitcoin, rows = NULL, theme = ttheme("mOrange"))
+
+Text_Bitcoin <- paste("Daily percentage change in Bitcoin's price.",
+                   " Mean (red) and median (blue) are given for both upward and downward trends.", sep = "")
+
+Text_plot_Bitcoin <- ggparagraph(text = Text_Bitcoin, face = "italic", size = 11, color = "black")
+
+
+
+Graph_Bitcoin <- ggplot(Tabela_Bitcoin, aes(x = Date)) +
+  geom_bar(aes(y = Proc_promena), stat = 'identity') +
+  geom_hline(yintercept = Median_Bitcoin, color = "blue") +
+  geom_hline(yintercept = Mean_Bitcoin, color = "red") +
+  geom_hline(yintercept = Neg_median_Bitcoin, color = "blue") +
+  geom_hline(yintercept = Neg_mean_Bitcoin, color = "red") +
+  ylim(-20, 20) +
+  scale_x_continuous(breaks = round(seq(min(Tabela_Bitcoin$Date), max(Tabela_Bitcoin$Date), by = 366),1)) +
+  labs(y = "(%)", x = "Year", title = "Percentage change in price by day Bitcoin") +
+  theme_bw(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+
+
+
+ggarrange(Graph_Bitcoin, Tabela_plot_Bitcoin, Text_plot_Bitcoin, 
+          ncol = 1, nrow = 3,
+          heights = c(5, 1, 0.6))
+
+
 # ALGORAND
 
 # Razlika po danu procentualna
@@ -886,6 +992,61 @@ ggplot(Tabela_Algorand, aes(x = Date, y = Proc_razlika_max_i_min)) +
   labs(y = "Procentualna razlika", x = "Dan", title = "Procentualna razlika maksimalna i minimalna vrednost po danu Algo") +
   theme_bw(base_size = 30)
 
+
+
+#Procentualna promena po danu vrednosti i volume-a + medijana i ar. sredina
+
+
+Median_Algo <- median(Pozitivna_proc_promena_po_danu_Algo$Proc_promena)
+
+Mean_Algo <- mean(Pozitivna_proc_promena_po_danu_Algo$Proc_promena)
+
+
+Neg_median_Algo <- median(Negativna_proc_promena_po_danu_Algo$Proc_promena)
+
+Neg_mean_Algo <- mean(Negativna_proc_promena_po_danu_Algo$Proc_promena)
+
+
+Sd_Algo <- sd(Pozitivna_proc_promena_po_danu_Algo$Proc_promena)
+
+Neg_sd_Algo <- sd(Negativna_proc_promena_po_danu_Algo$Proc_promena)
+
+
+Medijana_sredina_Algo <- cbind(Median_Algo, Mean_Algo, Neg_median_Algo, Neg_mean_Algo)
+
+Medijana_sredina_Algo <- as.data.frame(Medijana_sredina_Algo)
+
+Medijana_sredina_Algo <- cbind(Medijana_sredina_Algo, Sd_Algo, Neg_sd_Algo)
+
+
+Tabela_plot_Algo <- ggtexttable(Medijana_sredina_Algo, rows = NULL, theme = ttheme("mOrange"))
+
+Text_Algo <- paste("Daily percentage change in ALGO's price.",
+                      " Mean (red) and median (blue) are given for both upward and downward trends.", sep = "")
+
+Text_plot_Algo <- ggparagraph(text = Text_Algo, face = "italic", size = 11, color = "black")
+
+
+
+Graph_Algo <- ggplot(Tabela_Algorand, aes(x = Date)) +
+  geom_bar(aes(y = Proc_promena), stat = 'identity') +
+  geom_hline(yintercept = Median_Algo, color = "blue") +
+  geom_hline(yintercept = Mean_Algo, color = "red") +
+  geom_hline(yintercept = Neg_median_Algo, color = "blue") +
+  geom_hline(yintercept = Neg_mean_Algo, color = "red") +
+  scale_x_continuous(breaks = round(seq(min(Tabela_Algorand$Date), max(Tabela_Algorand$Date), by = 366),1)) +
+  labs(y = "(%)", x = "Year", title = "Percentage change in price by day ALGO") +
+  theme_bw(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+
+
+
+ggarrange(Graph_Algo, Tabela_plot_Algo, Text_plot_Algo, 
+          ncol = 1, nrow = 3,
+          heights = c(5, 1, 0.6))
+
+
+
 # CHAINLINK
 
 # Razlika po danu procentualna
@@ -928,6 +1089,58 @@ ggplot(Tabela_Chainlink, aes(x = Date, y = Proc_razlika_max_i_min)) +
   geom_line() +
   labs(y = "Procentualna razlika", x = "Dan", title = "Procentualna razlika maksimalna i minimalna vrednost po danu Link") +
   theme_bw(base_size = 30)
+
+
+#Medijana i ar. sredina vrednost po danu
+
+Median_Link <- median(Pozitivna_proc_promena_po_danu_Link$Proc_promena)
+
+Mean_Link <- mean(Pozitivna_proc_promena_po_danu_Link$Proc_promena)
+
+
+Neg_median_Link <- median(Negativna_proc_promena_po_danu_Link$Proc_promena)
+
+Neg_mean_Link <- mean(Negativna_proc_promena_po_danu_Link$Proc_promena)
+
+
+
+Sd_Link <- sd(Pozitivna_proc_promena_po_danu_Link$Proc_promena)
+
+Neg_sd_Link <- sd(Negativna_proc_promena_po_danu_Link$Proc_promena)
+
+
+Medijana_sredina_link <- cbind(Median_Link, Mean_Link, Neg_median_Link, Neg_mean_Link)
+
+Medijana_sredina_link <- as.data.frame(Medijana_sredina_link)
+
+Medijana_sredina_link <- cbind(Medijana_sredina_link, Sd_Link, Neg_sd_Link)
+
+
+Tabela_plot_link <- ggtexttable(Medijana_sredina_link, rows = NULL, theme = ttheme("mOrange"))
+
+Text_link <- paste("Daily percentage change in LINK's price.",
+                   " Mean (red) and median (blue) are given for both upward and downward trends.", sep = "")
+
+Text_plot_link <- ggparagraph(text = Text_link, face = "italic", size = 11, color = "black")
+
+
+Proc_plot_link <- ggplot(Tabela_Chainlink, aes(x = Date)) +
+  geom_bar(aes(y = Proc_promena), stat = 'identity') +
+  geom_hline(yintercept = Median_Link, color = "blue") +
+  geom_hline(yintercept = Mean_Link, color = "red") +
+  geom_hline(yintercept = Neg_median_Link, color = "blue") +
+  geom_hline(yintercept = Neg_mean_Link, color = "red") +
+  scale_x_continuous(breaks = round(seq(min(Tabela_Chainlink$Date), max(Tabela_Chainlink$Date), by = 366),1)) +
+  ylim(-30, 65) +
+  labs(y = "(%)", x = "Year", title = "Percentage change in price by day LINK") +
+  theme_bw(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+
+
+ggarrange(Proc_plot_link, Tabela_plot_link, Text_plot_link, 
+          ncol = 1, nrow = 3,
+          heights = c(5, 1, 0.6))
+
 
 #TEZOS
 
@@ -973,27 +1186,53 @@ ggplot(Tabela_Tezos, aes(x = Date, y = Proc_razlika_max_i_min)) +
   theme_bw(base_size = 30)
 
 
-# Bazicna statistika
-
-Kripto <- c("Bitcoin", "Algo", "Link", "Xtz")
-
-Medijalna_razlika_u_toku_dana <- c(median(Tabela_Bitcoin$Raskorak, na.rm = T), median(Tabela_Algorand$Raskorak, na.rm = T), median(Tabela_Chainlink$Raskorak, na.rm = T), median(Tabela_Tezos$Raskorak, na.rm = T))
-
-Medijalna_procentualna_razlika_u_toku_dana <- c(median(Tabela_Bitcoin$Proc_razlika_za_dan, na.rm = T), median(Tabela_Algorand$Proc_razlika_za_dan, na.rm = T), median(Tabela_Chainlink$Proc_razlika_za_dan, na.rm = T), median(Tabela_Tezos$Proc_razlika_za_dan, na.rm = T))
-
-Medijalna_razlika_u_toku_dana <- c(median(Tabela_Bitcoin$Proc_razlika_za_dan, na.rm = T), median(Tabela_Algorand$Proc_razlika_za_dan, na.rm = T), median(Tabela_Chainlink$Proc_razlika_za_dan, na.rm = T), median(Tabela_Tezos$Proc_razlika_za_dan, na.rm = T))
-
-Medijalna_procentualna_dnevna_razlika <- c(median(Tabela_Bitcoin$Proc_promena, na.rm = T), median(Tabela_Algorand$Proc_promena, na.rm = T), median(Tabela_Chainlink$Proc_promena, na.rm = T), median(Tabela_Tezos$Proc_promena, na.rm = T))
-
-Medijalna_procentualna_razlika_high_low_za_dan <- c(median(Tabela_Bitcoin$Proc_razlika_max_i_min, na.rm = T), median(Tabela_Algorand$Proc_razlika_max_i_min, na.rm = T), median(Tabela_Chainlink$Proc_razlika_max_i_min, na.rm = T), median(Tabela_Tezos$Proc_razlika_max_i_min, na.rm = T))
-
-Medijalna_procentualna_mesecna_razlika_prvi_zadnji_dan <- c(median(Bitcoin_prvi_zadnji_mesec$Proc_promena, na.rm = T), median(Algo_prvi_zadnji_mesec$Proc_promena, na.rm = T), median(Link_prvi_zadnji_mesec$Proc_promena, na.rm = T), median(Xtz_prvi_zadnji_mesec$Proc_promena, na.rm = T))
+#Procentualna promena po danu vrednosti i volume-a + medijana i ar. sredina
 
 
-Kripto_bazicna_statistika <- cbind(Kripto, Medijalna_razlika_u_toku_dana, Medijalna_procentualna_razlika_u_toku_dana, Medijalna_procentualna_dnevna_razlika, Medijalna_procentualna_razlika_high_low_za_dan, Medijalna_procentualna_mesecna_razlika_prvi_zadnji_dan)
+Median_Xtz <- median(Pozitivna_proc_promena_po_danu_Xtz$Proc_promena)
 
-Kripto_bazicna_statistika <- as.data.frame(Kripto_bazicna_statistika)
+Mean_Xtz <- mean(Pozitivna_proc_promena_po_danu_Xtz$Proc_promena)
 
 
-sd(Tabela_Bitcoin$Close)
+Neg_median_Xtz <- median(Negativna_proc_promena_po_danu_Xtz$Proc_promena)
+
+Neg_mean_Xtz <- mean(Negativna_proc_promena_po_danu_Xtz$Proc_promena)
+
+
+Sd_Xtz <- sd(Pozitivna_proc_promena_po_danu_Xtz$Proc_promena)
+
+Neg_sd_Xtz <- sd(Negativna_proc_promena_po_danu_Xtz$Proc_promena)
+
+
+Medijana_sredina_Xtz <- cbind(Median_Xtz, Mean_Xtz, Neg_median_Xtz, Neg_mean_Xtz)
+
+Medijana_sredina_Xtz <- as.data.frame(Medijana_sredina_Xtz)
+
+Medijana_sredina_Xtz <- cbind(Medijana_sredina_Xtz, Sd_Xtz, Neg_sd_Xtz)
+
+
+Tabela_plot_Xtz <- ggtexttable(Medijana_sredina_Xtz, rows = NULL, theme = ttheme("mOrange"))
+
+Text_Xtz <- paste("Daily percentage change in XTZ's price.",
+                   " Mean (red) and median (blue) are given for both upward and downward trends.", sep = "")
+
+Text_plot_Xtz <- ggparagraph(text = Text_Xtz, face = "italic", size = 11, color = "black")
+
+
+
+Graph_Xtz <- ggplot(Tabela_Tezos, aes(x = Date)) +
+  geom_bar(aes(y = Proc_promena), stat = 'identity') +
+  geom_hline(yintercept = Median_Xtz, color = "blue") +
+  geom_hline(yintercept = Mean_Xtz, color = "red") +
+  geom_hline(yintercept = Neg_median_Xtz, color = "blue") +
+  geom_hline(yintercept = Neg_mean_Xtz, color = "red") +
+  scale_x_continuous(breaks = round(seq(min(Tabela_Tezos$Date), max(Tabela_Tezos$Date), by = 366),1)) +
+  labs(y = "(%)", x = "Year", title = "Percentage change in price by day XTZ") +
+  theme_bw(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+
+
+ggarrange(Graph_Xtz, Tabela_plot_Xtz, Text_plot_Xtz, 
+          ncol = 1, nrow = 3,
+          heights = c(5, 1, 0.6))
 
