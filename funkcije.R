@@ -252,14 +252,43 @@ layout.modular <- function(graf, klaster) {
 }
 
 
+#10. snowball 
 
+#Funkcija koja izdvaja imena onih profila sa kojima su posmatrani akteri bili natprosecno cesto u interakciji (Galjak, 2017)
 
-
-
-############ snowball ###########
 snowball <- function(x) {
   sb <- names(sort(table(x$replyToSN)[table(x$replyToSN) > mean(table(x$replyToSN))],
                    decreasing = T))
   sb <- sb[!(sb %in% unique(x$screenName))]
   return(c(unique(x$screenName), sb))
+}
+
+
+
+#11. Modus
+
+mode <- function(x) {
+  uniqx <- unique(x)
+  uniqx[which.max(tabulate(match(x, uniqx)))]
+}
+
+
+#12. Bazicna statistika
+
+bs <- function(x) {
+  Bazicna_statistika <- as.matrix(
+    cbind(
+      mean(x, na.rm = T),
+      median(x, na.rm = T),
+      mode(x),
+      sd(x)
+    )
+  )
+  colnames(Bazicna_statistika) <-
+    c("Aritmeticka sredina",
+      "Medijana",
+      "Modus",
+      "Standardna devijacija")
+Bazicna_statistika <- as.data.frame(Bazicna_statistika)
+return(Bazicna_statistika)
 }
