@@ -22,7 +22,10 @@ library(XML)
 library(imputeTS)
 library(zoo)
 library(ggpubr)
+library(TTR)
 
+
+install.packages('TTR', dependencies = TRUE, INSTALL_opts = '--no-lock')
 
 install.packages("ggpubr", dependencies = TRUE, INSTALL_opts = '--no-lock')
 
@@ -895,6 +898,27 @@ ggplot(Tabela_Bitcoin, aes(x = Date, y = Proc_razlika_max_i_min)) +
   theme_bw(base_size = 30)
 
 
+#MA i EMA
+
+Tabela_Bitcoin <- Tabela_Bitcoin[-2380,]
+
+Tabela_Bitcoin$MA <- SMA(Tabela_Bitcoin$Close, n = 50)
+
+Tabela_Bitcoin$EMA <- SMA(Tabela_Bitcoin$Close, n = 200)
+
+Death_Cross_Bitcoin <- Tabela_Bitcoin %>%
+                      filter(MA > EMA, lead(MA) < lead(EMA))
+
+Datum_Bitcoin_Death <- Death_Cross_Bitcoin$Date
+
+
+Skok_Bitcoin <- Tabela_Bitcoin %>%
+                filter (MA < EMA, lead(MA) > lead(EMA))
+
+
+
+Tabela_Bitcoin <- Tabela_Bitcoin %>% arrange(Date)
+
 
 #Procentualna promena po danu vrednosti i volume-a + medijana i ar. sredina
 
@@ -936,7 +960,7 @@ Graph_Bitcoin <- ggplot(Tabela_Bitcoin, aes(x = Date)) +
   geom_hline(yintercept = Mean_Bitcoin, color = "red") +
   geom_hline(yintercept = Neg_median_Bitcoin, color = "blue") +
   geom_hline(yintercept = Neg_mean_Bitcoin, color = "red") +
-  ylim(-20, 20) +
+  ylim(-10, 10) +
   scale_x_continuous(breaks = round(seq(min(Tabela_Bitcoin$Date), max(Tabela_Bitcoin$Date), by = 366),1)) +
   labs(y = "(%)", x = "Year", title = "Percentage change in price by day Bitcoin") +
   theme_bw(base_size = 10) +
@@ -947,6 +971,59 @@ Graph_Bitcoin <- ggplot(Tabela_Bitcoin, aes(x = Date)) +
 ggarrange(Graph_Bitcoin, Tabela_plot_Bitcoin, Text_plot_Bitcoin, 
           ncol = 1, nrow = 3,
           heights = c(5, 1, 0.6))
+
+
+#Boxplot
+
+ggplot(Pozitivna_proc_promena_po_danu_Bitcoin, aes(y = Proc_promena)) +
+  geom_boxplot()
+
+
+ggplot(Negativna_proc_promena_po_danu_Bitcoin, aes(y = Proc_promena)) +
+  geom_boxplot()
+
+
+
+# MA i EMA
+
+Bitcoin_MA_EMA <- ggplot(Tabela_Bitcoin, aes(x = Date)) +
+  geom_histogram(aes(y = Close), stat = 'identity') +
+  geom_line(aes(y = MA), color = "orange") +
+  geom_line(aes(y = EMA), color = "green") +
+  scale_y_log10() +
+  geom_vline(xintercept = Datum_Bitcoin_Death, color = "red") +
+  geom_vline(xintercept = Datum_Bitcoin_Jump, color = "blue") +
+  labs(y = "Price", x = "Day") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+
+
+kolone <- c(1,5)
+
+Tabela_Death_Bitcoin <- Death_Cross_Bitcoin[, kolone]
+
+Tabela_Jump_Bitcoin <- Skok_Bitcoin[, kolone]
+
+
+Tabela_plot_Death_Bitcoin <- ggtexttable(Tabela_Death_Bitcoin, rows = NULL, theme = ttheme("lRed"))
+Tabela_plot_Jump_Bitcoin <- ggtexttable(Tabela_Jump_Bitcoin, rows = NULL, theme = ttheme("lBlue"))
+
+Tabele_Death_Jump_Bitcoin <- ggarrange(Tabela_plot_Death_Bitcoin, Tabela_plot_Jump_Bitcoin)
+
+Tekst_Tabele_Death_Jump <- paste("Death cross (red) and golden cros (blue) dates and closing prices")
+Tekst_Tabele_Death_Jump_plot <- ggparagraph(text = Tekst_Tabele_Death_Jump, size = 14, color = "purple")
+
+Tabele_Death_Jump_Bitcoin_Tekst <- ggarrange(Tabele_Death_Jump_Bitcoin, Tekst_Tabele_Death_Jump_plot, ncol = 1, nrow = 2,
+                                             heights = c(5, 1.5))
+
+Text_Death_Jump_Bitcoin <- paste("Death crosses (red) and golden crosses (blue) for Bitcoin",
+                      ". The intersections of the 50 day MA (orange) and the 200 day MA (green) are used to predict future price changes. When the 50 day MA crosses the 200 day MA from bellow (golden cross) it is believed that the price will explode. On the other hand, when the 50 day MA crosses the 200 day MA from above, it is believed that the price will plummet.", sep = "")
+
+Text_plot_Death_Jump_Bitcoin <- ggparagraph(text = Text_Death_Jump_Bitcoin, face ="bold", size = 14, color = "black")
+
+
+ggarrange(Bitcoin_MA_EMA, Tabele_Death_Jump_Bitcoin_Tekst, Text_plot_Death_Jump_Bitcoin, 
+          ncol = 1, nrow = 3,
+          heights = c(2, 1, 0.6))
 
 
 # ALGORAND
