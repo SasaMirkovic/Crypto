@@ -591,6 +591,63 @@ Bitcoin_max_min_mesec$Min_Close <- as.numeric(Bitcoin_max_min_mesec$Min_Close)
 
 
 
+
+#Dolar cost average profit po koinu
+
+Bitcoin_prva_vrednost_po_mesecu_skraceno <- Bitcoin_prva_vrednost_po_mesecu[-1:-53,]
+Bitcoin_prva_vrednost_po_mesecu_skraceno$Bitcoina_za_100_dolara <- 100/Bitcoin_prva_vrednost_po_mesecu_skraceno$Close
+Ukupno_bitcoina_dolar_cost_average <- sum(Bitcoin_prva_vrednost_po_mesecu_skraceno$Bitcoina_za_100_dolara)
+Razlika_Bitcoin <- Ukupno_bitcoina_dolar_cost_average*39406.94 - 2600
+
+
+Algo_prva_vrednost_po_mesecu$Algo_za_100_dolara <- 100/Algo_prva_vrednost_po_mesecu$Close
+Ukupno_algo_dolar_cost_average <- sum(Algo_prva_vrednost_po_mesecu$Algo_za_100_dolara)
+Razlika_Algo <- Ukupno_algo_dolar_cost_average*0.8542 - 2600
+
+
+Link_prva_vrednost_po_mesecu_skraceno <- Link_prva_vrednost_po_mesecu[-1:-21,]
+Link_prva_vrednost_po_mesecu_skraceno$Link_za_100_dolara <- 100/Link_prva_vrednost_po_mesecu_skraceno$Close
+Ukupno_link_dolar_cost_average <- sum(Link_prva_vrednost_po_mesecu_skraceno$Link_za_100_dolara)
+Razlika_Link <- Ukupno_link_dolar_cost_average*19.50 - 2600
+
+
+Xtz_prva_vrednost_po_mesecu_skraceno <- Xtz_prva_vrednost_po_mesecu[-1:-20,]
+Xtz_prva_vrednost_po_mesecu_skraceno$Xtz_za_100_dolara <- 100/Xtz_prva_vrednost_po_mesecu_skraceno$Close
+Ukupno_xtz_dolar_cost_average <- sum(Xtz_prva_vrednost_po_mesecu_skraceno$Xtz_za_100_dolara)
+Razlika_Xtz <- Ukupno_xtz_dolar_cost_average*2.86 - 2600
+
+
+Profit <- cbind(Razlika_Bitcoin, Razlika_Algo, Razlika_Link, Razlika_Xtz)
+
+Profit <- as.matrix(Profit)
+
+Profit <- t(Profit)
+
+Profit <- as.data.frame(Profit)
+
+Profit$Coin <- c("Bitcoin", "Algo", "Link", "Xtz")
+
+Profit <- Profit %>%
+  rename(Profit = V1)
+
+Profit$Last_close_price <- c(39406.94, 0.8542, 19.50, 2.86)
+
+rownames(Profit) <- NULL
+
+Profit <- Profit[, c("Coin", "Last_close_price", "Profit")]
+
+Profit_plot <- ggplot(Profit, aes(x = reorder(Coin, -`Profit`), y = Profit, fill = Coin)) +
+  geom_bar(stat = 'identity', show.legend = F) +
+  scale_fill_brewer(palette = "Dark2") +
+  labs(y = "Profit", x = "Crypto") +
+  theme_bw(base_size = 30) 
+
+
+Profit_tabela_plot <- ggtexttable(Profit, rows = NULL, theme = ttheme("mOrange"))
+
+ggarrange(Profit_plot, Profit_tabela_plot, ncol = 2, nrow = 1, widths = c(5,1), heights = c(5,5))
+
+
 #ALGO
 
 Algo_maksimum_po_mesecu <- Tabela_Algorand %>%
