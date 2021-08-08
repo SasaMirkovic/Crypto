@@ -7,7 +7,6 @@ library(tidyr)
 library(lubridate)
 library(scales)
 library(broom)
-library(ggplot2)
 library(xlsx)
 library(rtweet)
 library(tidyverse)
@@ -23,11 +22,13 @@ library(imputeTS)
 library(zoo)
 library(ggpubr)
 library(TTR)
-
+library(plotly)
 
 install.packages('TTR', dependencies = TRUE, INSTALL_opts = '--no-lock')
 
 install.packages("ggpubr", dependencies = TRUE, INSTALL_opts = '--no-lock')
+
+install.packages("plotly", dependencies = TRUE, INSTALL_opts = '--no-lock')
 
 options(scipen = 999)
 
@@ -1369,4 +1370,216 @@ Graph_Xtz <- ggplot(Tabela_Tezos, aes(x = Date)) +
 ggarrange(Graph_Xtz, Tabela_plot_Xtz, Text_plot_Xtz, 
           ncol = 1, nrow = 3,
           heights = c(5, 1, 0.6))
+
+#########################################################################################################################
+
+## KRIPTOMAT ZADATAK ##
+
+
+Kriptomat_podaci <- read.xlsx('Excel/User_Overview_by_Countries.xlsx', sheetIndex = 1)
+
+str(Kriptomat_podaci)
+
+
+Kriptomat_podaci <- Kriptomat_podaci %>%
+  mutate(Percentage_difference_registered_verified = ((Number.of.verifications - Number.of.registrations) / Number.of.registrations) *100)
+
+Kriptomat_podaci <- Kriptomat_podaci %>%
+  mutate(Percentage_difference_verified_fiat = ((Number.of.fiat.depositors - Number.of.verifications) / Number.of.verifications)*100)
+
+Kriptomat_podaci <- Kriptomat_podaci %>%
+  mutate(Percentage_difference_verified_traders = ((Number.of.traders - Number.of.verifications) / Number.of.verifications)*100)
+
+Kriptomat_podaci <- Kriptomat_podaci %>%
+  mutate(Percentage_difference_fiat_traders = ((Number.of.traders - Number.of.fiat.depositors) / Number.of.fiat.depositors)*100)
+
+
+Percentage_registered_verified_table <- Kriptomat_podaci[, c(1:3, 10)]  
+
+Percentage_verified_fiat_table <- Kriptomat_podaci[, c(1, 3:4, 7)]
+
+Percentage_verified_traders_table <- Kriptomat_podaci[, c(1, 3, 5 ,8)]
+
+
+### Odnos registrovanih i verifikovanih ###
+
+Percentage_registered_verified_plot <- ggplot(Kriptomat_podaci, aes(x = reorder(Country.name, Percentage_difference_registered_verified), y = Percentage_difference_registered_verified, fill = Country.name)) +
+  geom_bar(stat = 'identity', show.legend = F) +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_bw(base_size = 20) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(y = "(%)", x = '')
+  
+
+Percentage_registered_verified_boxplot <- ggplot(Kriptomat_podaci, aes(y = Percentage_difference_registered_verified)) +
+  geom_boxplot(col="black", fill = "yellow", outlier.colour="red", outlier.shape=8,
+               outlier.size=4) +
+  theme_bw(base_size = 27) +
+  theme(axis.ticks.x = element_blank(), axis.text.x = element_blank()) +
+  labs(y = "(%)", x = "Aggregated data")
+
+
+
+Plotovi_registered_verified <- ggarrange(Percentage_registered_verified_plot, Percentage_registered_verified_boxplot, ncol = 2, nrow = 1)
+
+
+Percentage_registered_verified_table_plot <- ggtexttable(Percentage_registered_verified_table, rows = NULL, theme = ttheme("mOrange"))  
+
+  
+Percentage_registered_verified_text <- paste("Even if we exclude Canada as a non-European country and an outlier, we can see that the difference between countries is great (although we can make a distinction between 3 blocks (Austria, Switzerland-Slovakia, Slovenia-BiH).",
+                                             " Aggregated data points to the fact that many potential customers are lost after the first step.", sep = "")
+
+Percentage_registered_verified_text_plot <- ggparagraph(text = Percentage_registered_verified_text, face = "italic", size = 20, color = "black")  
+  
+  
+ggarrange(Plotovi_registered_verified, Percentage_registered_verified_table_plot, Percentage_registered_verified_text_plot,
+          ncol = 1, nrow = 3, heights = c(3, 1, 0.5))
+
+
+
+### Odnos verifikovanih i onih koji su depozitovali fiat ###
+
+
+Percentage_verified_fiat_plot <- ggplot(Kriptomat_podaci, aes(x = reorder(Country.name, Percentage_difference_verified_fiat), y = Percentage_difference_verified_fiat, fill = Country.name)) +
+  geom_bar(stat = 'identity', show.legend = F) +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_bw(base_size = 20) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(y = "(%)", x = '')
+
+
+
+Percentage_verified_fiat_boxplot <- ggplot(Kriptomat_podaci, aes(y = Percentage_difference_verified_fiat)) +
+  geom_boxplot(col="black", fill = "yellow", outlier.colour="red", outlier.shape=8,
+               outlier.size=4) +
+  theme_bw(base_size = 27) +
+  theme(axis.ticks.x = element_blank(), axis.text.x = element_blank()) +
+  labs(y = "(%)", x = "Aggregated data")
+
+
+Plotovi_verified_fiat <- ggarrange(Percentage_verified_fiat_plot, Percentage_verified_fiat_boxplot, ncol = 2, nrow = 1)
+
+Percentage_verified_fiat_table_plot <- ggtexttable(Percentage_verified_fiat_table, rows = NULL, theme = ttheme("mOrange"))
+
+Percentage_verified_fiat_text <- paste("We can clearly see that, although there is a massive difference between some countries, the overall conversion rate is unacceptably inefficient.",
+                                       " With a median of over 60%, immediate action is required at this step.",
+                                       " This is especially true for Austria and Switzerland as the most promising countries (judging by the number of registrations and verifications).", sep = "")
+
+Percentage_verified_fiat_text_plot <- ggparagraph(text = Percentage_verified_fiat_text,  face = "italic", size = 20, color = "black")
+
+ggarrange(Plotovi_verified_fiat, Percentage_verified_fiat_table_plot, Percentage_verified_fiat_text_plot, ncol = 1, nrow = 3, heights = c(3, 1, 0.5))
+
+
+
+### Odnos verifikovanih i onih koji su trgovali ###
+
+Percentage_verified_traders_plot <- ggplot(Kriptomat_podaci, aes(x = reorder(Country.name, Percentage_difference_verified_traders), y = Percentage_difference_verified_traders, fill = Country.name)) +
+  geom_bar(stat = 'identity', show.legend = F) +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_bw(base_size = 20) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(y = "(%)", x = "")
+
+
+Percentage_verified_traders_boxplot <- ggplot(Kriptomat_podaci, aes(y = Percentage_difference_verified_traders)) +
+  geom_boxplot(col="black", fill = "yellow", outlier.colour="red", outlier.shape=8,
+               outlier.size=4) +
+  theme_bw(base_size = 27) +
+  theme(axis.ticks.x = element_blank(), axis.text.x = element_blank()) +
+  labs(y = "(%)", x = "Aggregated data")
+
+
+Plotovi_verified_traders <- ggarrange(Percentage_verified_traders_plot, Percentage_verified_traders_boxplot, nrow = 1, ncol = 2)
+
+Percentage_verified_traders_table_plot <- ggtexttable(Percentage_verified_traders_table, rows = NULL, theme = ttheme('mOrange'))
+
+
+Percentage_verified_traders_text <- paste("The results are simmilar to those concerning ratio between verified and profiles which made fiat deposits.",
+                                          " Although the number of traders is a bit bigger than the number of fiat depositors for some countries, this difference does not improve the conversion rate in any significant manner, and the sum of all traders remains a bit smaller than the sum of all fiat depositors.", sep = "")
+
+Percentage_verified_traders_text_plot <- ggparagraph(Percentage_verified_traders_text, size = 20, face = "italic", color = "black")
+
+ggarrange(Plotovi_verified_traders, Percentage_verified_traders_table_plot, Percentage_verified_traders_text_plot, ncol = 1,nrow = 3, heights = c(3, 1, 0.5))
+
+
+
+### Funnel Charts ###
+
+Funnel_nerazvrstano <- plot_ly()
+
+Funnel_nerazvrstano <- Funnel_nerazvrstano %>%
+  add_trace(
+    type = "funnel",
+    y = c("Number of registrations", "Number of verifications", "Number of fiat depositors", "Number of traders"),
+    x = c(51356, 39152.7, 16450.6, 16395.6),
+    textposition = "inside",
+    textinfo = "value+percent initial") 
+Funnel_nerazvrstano <- Funnel_nerazvrstano %>%
+  layout(yaxis = list(categoryarray = c("Number of registrations", "Number of verifications", "Number of fiat depositors", "Number of traders")))
+
+Funnel_nerazvrstano
+
+
+
+Funnel_razvrstano <- plot_ly(
+            type = 'funnel',
+            name = 'Austria',
+            y = c("Number of registrations", "Number of verifications", "Number of fiat depositors", "Number of traders"),
+            x = c (23504.4, 19344.0, 9663.6, 9445.2),
+            textinfo = "value+percent initial")
+
+ Funnel_razvrstano <- Funnel_razvrstano %>%
+   add_trace(type = 'funnel',
+             name = 'Slovenia',
+             orientation = "h",
+             y = c("Number of registrations", "Number of verifications", "Number of fiat depositors", "Number of traders"),
+             x = c (7696.8, 5218.2, 2977.2, 3012.3),
+             textposition = "inside",
+             textinfo = "value+percent initial")
+
+ Funnel_razvrstano <- Funnel_razvrstano %>%
+                      add_trace(type = 'funnel',
+                      name = 'Switzerland',
+                      orientation = "h",
+                      y = c("Number of registrations", "Number of verifications", "Number of fiat depositors", "Number of traders"),
+                      x = c (13874.9, 10826.4, 2724.8, 2757.3),
+                      textposition = "inside",
+                      textinfo = "value+percent initial")
+ Funnel_razvrstano <- Funnel_razvrstano %>%
+   add_trace(type = 'funnel',
+             name = 'Slovakia',
+             orientation = "h",
+             y = c("Number of registrations", "Number of verifications", "Number of fiat depositors", "Number of traders"),
+             x = c (1922.4, 1513.6, 816.0, 813.6),
+             textposition = "inside",
+             textinfo = "value+percent initial")
+ Funnel_razvrstano <- Funnel_razvrstano %>%
+   add_trace(type = 'funnel',
+             name = 'Bosnia and Herzegovina',
+             orientation = "h",
+             y = c("Number of registrations", "Number of verifications", "Number of fiat depositors", "Number of traders"),
+             x = c (2865.5, 1974.5, 231.0, 321.2),
+             textposition = "inside",
+             textinfo = "value+percent initial")
+ Funnel_razvrstano <- Funnel_razvrstano %>%
+   add_trace(type = 'funnel',
+             name = 'Canada',
+             orientation = "h",
+             y = c("Number of registrations", "Number of verifications", "Number of fiat depositors", "Number of traders"),
+             x = c (1492.0, 276.0, 38.0, 46.0),
+             textposition = "inside",
+             textinfo = "value+percent initial")
+ Funnel_razvrstano <- Funnel_razvrstano %>%
+   layout(yaxis = list(categoryarray = c("Number of registrations", "Number of verifications", "Number of fiat depositors", "Number of traders")))
+ 
+Funnel_razvrstano
+
+
+
+
+
+
+
+
+
 
