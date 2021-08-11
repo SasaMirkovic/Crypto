@@ -23,12 +23,16 @@ library(zoo)
 library(ggpubr)
 library(TTR)
 library(plotly)
+library(formattable)
+
 
 install.packages('TTR', dependencies = TRUE, INSTALL_opts = '--no-lock')
 
 install.packages("ggpubr", dependencies = TRUE, INSTALL_opts = '--no-lock')
 
 install.packages("plotly", dependencies = TRUE, INSTALL_opts = '--no-lock')
+
+install.packages("formattable", dependencies = TRUE, INSTALL_opts = '--no-lock')
 
 options(scipen = 999)
 
@@ -1576,10 +1580,91 @@ Funnel_razvrstano
 
 
 
+### GLOBAL CRYPTO ADOPTION DATA ###
+
+GCA_data <- read.csv('Excel/country-factsheet-table.csv')
+
+GCA_data$Numberof.crypto.owners <- gsub(",","", GCA_data$Numberof.crypto.owners)
+
+GCA_data$Numberof.crypto.owners <- as.numeric(GCA_data$Numberof.crypto.owners)
+
+GCA_data$Numberof.crypto.owners <- comma(GCA_data$Numberof.crypto.owners, digits = 0)
+
+GCA_data$Percentageof.the.population <- gsub("%", "", GCA_data$Percentageof.the.population)
+
+GCA_data$Percentageof.the.population <- as.numeric(GCA_data$Percentageof.the.population)
 
 
 
+GCA_data <- GCA_data %>% arrange(desc(Numberof.crypto.owners))
+
+GCA_data_top <- head(GCA_data, n = 10)
+
+GCA_apsolutne <- ggplot(GCA_data_top, aes(x = reorder(Country.Â.â.ľ, -Numberof.crypto.owners), y = Numberof.crypto.owners, fill = Country.Â.â.ľ)) +
+  geom_bar(stat = 'identity', show.legend = F) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(y = "Number of crypto owners", x = "Country")
 
 
 
+GCA_data_procenti <- GCA_data %>% arrange(desc(Percentageof.the.population))
 
+GCA_data_procenti_top <- head(GCA_data_procenti, n = 10)
+
+
+GCA_procenti <- ggplot(GCA_data_procenti_top, aes(x = reorder(Country.Â.â.ľ, -Percentageof.the.population), y = Percentageof.the.population, fill = Country.Â.â.ľ)) +
+  geom_bar(stat = 'identity', show.legend = F) +
+  labs(y = "Percentage of the population", x = "Country")
+
+
+GCA_tabela_apsolutne <- ggtexttable(GCA_data_top[,-4], rows = NULL, theme = ttheme("mOrange"))
+  
+  
+GCA_tabela_procenti <- ggtexttable(GCA_data_procenti_top[,-4], rows = NULL, theme = ttheme("mOrange"))
+  
+
+ggarrange(GCA_apsolutne, GCA_procenti, GCA_tabela_apsolutne, GCA_tabela_procenti, ncol = 2, nrow = 2)
+
+
+view(GCA_data)
+
+GCA_data_filtrirano <- GCA_data %>%
+  filter (Country.Â.â.ľ %in% c("Russia", "China", "Brazil", "Indonesia", "Turkey"))
+
+
+write.xlsx(GCA_data_filtrirano, "GCA data filtrirano.xlsx", row.names = F)
+
+
+ggplot(GCA_data_filtrirano, aes(x = Country.Â.â.ľ, y = Numberof.crypto.owners, fill = Country.Â.â.ľ)) + 
+  geom_tile(color = "black", size = 0.5) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0), trans = 'reverse') +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title="Waffle Chart", subtitle="Number of crypto owners by country",
+       caption="Source: tripleA") + 
+  theme(panel.border = element_rect(size = 2),
+        plot.title = element_text(size = rel(1.2)),
+        axis.text = element_blank(),
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        legend.title = element_blank(),
+        legend.position = "right")
+
+
+Crypto_ready_index <- read.csv("Excel/data.csv")
+
+write.xlsx(Crypto_ready_index, "CRI.xlsx", row.names = F)
+
+Crypto_ready_index <- read.xlsx("Excel/CRI.xlsx", sheetIndex = 1)
+
+Crypto_ready_index <- Crypto_ready_index %>%
+  rename(Annual_Crypto_Google_Searches_per_100K_People = X,
+         Crypto_Searches_Annual_Increase = X.1,
+         Number_of_Crypto_ATMs = X.2,
+         People_per_Crypto_ATM = X.3,
+         Area_per_Crypto_ATM = X.4,
+         Tax_and_Legislation = X.5,
+         Total_Crypto_Ready_Score = X.6)
+
+CRI_filtrirano <- Crypto_ready_index %>%
+  filter(Country.Region %in% c("Russia", "China", "Brazil", "Indonesia", "Turkey"))
